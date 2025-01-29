@@ -1,0 +1,128 @@
+---
+title: "Untitled"
+format:
+  html: 
+     self-contained: true
+execute: 
+  echo: false
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup}
+library(dplyr)
+library(readr)
+library(purrr)
+library(gt)
+library(pander)
+library(here)
+library(tidyr)
+library(glue)
+```
+
+```{r datos}
+sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales.csv"))
+etiquetas <- read_csv2(here("datos/sicvir_etiquetas.csv"))
+
+variables <- etiquetas |> 
+  slice(9:n()) |> 
+  pull(campo)
+```
+
+
+```{r}
+# walk(etiquetas$campo, ~{
+#   sicvir |> 
+#     select(all_of(.x)) |> 
+#     gt()
+# })
+```
+
+```{r fig.width = 6, results = "asis"}
+walk(variables, \(variable) {
+  # variable <- variables[2]
+  
+  titulo <- etiquetas |> 
+    filter(campo == variable) |> 
+    pull(descripcion)
+  
+  pandoc.header(titulo, level = 3)
+  pandoc.p(paste("Variable", pandoc.emphasis.return(variable)))
+  
+  datos_variable <- sicvir |>
+    select(comuna, region, !!sym(variable))
+  
+  n_no_perdidos <- length(!is.na(datos_variable[[variable]]))
+  
+  pandoc.p(glue("Comunas con datos en la variable: {n_no_perdidos}"))
+  
+  # tabla básica
+  tabla <- datos_variable |> 
+    arrange(desc(!!sym(variable))) |> 
+    slice(1:20) |> 
+    gt() |>
+    data_color(columns = !!sym(variable),
+               palette = "YlGn")
+  
+  # estadísticos descriptivos
+  percentiles <- datos_variable |> 
+    filter(!is.na(!!sym(variable))) |>
+    summarize(promedio = mean(!!sym(variable)),
+              min = min(!!sym(variable)),
+              p_25 = quantile(!!sym(variable), .25),
+              p_50 = median(!!sym(variable)),
+              p_60 = quantile(!!sym(variable), .60),
+              p_75 = quantile(!!sym(variable), .75),
+              max = max(!!sym(variable)))
+  
+  # tabla
+  tabla_percentiles <- percentiles |>   
+    gt() |>
+    data_color(rows = 1, palette = "Blues", direction = "row", 
+               domain = c(percentiles$p_25, percentiles$max),
+               na_color = "white") |> 
+    fmt_number(decimals = 1, dec_mark = ",", sep_mark = ".") |> 
+    opt_table_lines("none") |> 
+    cols_width(everything() ~ px(90)) |> 
+    cols_label(
+      min = "mínimo",
+      p_25 = "25%",
+      p_50 = "50%",
+      p_60 = "60%",
+      p_75 = "75%",
+      max = "máximo") |> 
+    print(type = "html")
+  
+  datos_variable |> 
+    filter(!is.na(!!sym(variable))) |> 
+    summarize(p_25 = sum(!!sym(variable) < percentiles$p_25),
+              p_50 = sum(!!sym(variable) < percentiles$p_50),
+              p_60 = sum(!!sym(variable) < percentiles$p_60),
+              p_75 = sum(!!sym(variable) < percentiles$p_75),
+              sobre_75 = sum(!!sym(variable) > percentiles$p_75)) |> 
+    pivot_longer(cols = everything()) |> 
+    mutate(name = case_match(name,
+                             "p_25" ~ "bajo 25%",
+                             "p_50" ~ "bajo 50%",
+                             "p_60" ~ "bajo 60%",
+                             "p_75" ~ "bajo 75%",
+                             "sobre_75" ~ "sobre 75%")) |> 
+    gt() |> 
+    cols_align(columns = name, "right") |> 
+    cols_align(columns = value, "left") |> 
+    cols_label(name = "", value = "Comunas") |> 
+    tab_style(locations = cells_column_labels(),
+              style = cell_text(weight = "bold")) |> 
+    data_color(columns = value, palette = "Blues") |> 
+    opt_table_lines("none") |> 
+    print(type = "html")
+  
+  pandoc.p('')
+  pandoc.horizontal.rule()
+  pandoc.p('')
+})
+
+```

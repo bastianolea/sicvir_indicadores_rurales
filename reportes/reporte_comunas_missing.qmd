@@ -1,0 +1,82 @@
+---
+title: "SICVIR: variables con comunas sin datos"
+format:
+  html: 
+     self-contained: true
+     toc: true
+     toc-title: "Contenidos"
+     toc-location: left
+     toc-expand: 1
+     toc-depth: 3
+     number-sections: false
+execute: 
+  echo: false
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup}
+library(dplyr)
+library(readr)
+library(stringr)
+library(purrr)
+library(gt)
+library(pander)
+library(here)
+library(glue)
+library(scales)
+```
+
+```{r datos}
+sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales.csv"))
+etiquetas <- read_csv2(here("datos/sicvir_etiquetas.csv"))
+```
+
+
+```{r loop, fig.width = 6, results = "asis"}
+walk(etiquetas$campo, \(variable) {
+  # variable <- etiquetas$campo[29]
+  
+  titulo <- etiquetas |> 
+    filter(campo == variable) |> 
+    pull(descripcion)
+  
+  # tabla
+  datos <- sicvir |>
+    # select(comuna, region, !!sym(variable)) |> 
+    filter(is.na(!!sym(variable)))
+  
+  porcentaje <- percent(nrow(datos)/nrow(sicvir), accuracy = 0.01)
+  concepto <- if_else(nrow(datos) == 1, "comuna", "comunas")
+  comunas <- paste(datos$comuna, collapse = ", ")
+  comunas <- str_replace(comunas, ",(?!.*,)", " y") # una coma, no seguida de otras comas
+  comunas <- str_trunc(comunas, 80)
+  
+  tabla <- datos |> 
+    select(region, provincia, comuna) |> 
+    gt() |> 
+    tab_style(locations = cells_body(columns = comuna),
+              style = cell_text(weight = "bold"))
+  
+  # sólo si no tienen comunas
+  if (nrow(datos) > 0) {
+    pandoc.header(titulo, level = 3)
+    
+    pandoc.p(glue("Variable _{variable}_"))
+    pandoc.p(glue("{nrow(datos)} {concepto} sin datos en esta variable ({porcentaje})"))
+    pandoc.p(glue("Comunas sin datos: _{comunas}_"))
+    
+    pandoc.p('::: {.callout-note collapse="true" title="Tabla"}')
+    print(tabla, type = "html")
+    pandoc.p(':::')
+    
+    pandoc.p("")
+    pandoc.horizontal.rule()
+    pandoc.p("")
+  }
+})
+
+```

@@ -1,0 +1,33 @@
+campo;año;descripcion
+cod_reg;No aplica;Código territorial de la región según la División Política Administrativa (DPA).
+region;No aplica;Nombre de la región según la División Política Administrativa (DPA).
+cod_prov;No aplica;Código territorial de la provincia según la División Política Administrativa (DPA).
+provincia;No aplica;Nombre de la provincia según la División Política Administrativa (DPA).
+cod_com;No aplica;Código territorial de la comuna según la División Política Administrativa (DPA).
+comuna;No aplica;Nombre de la comuna según la División Política Administrativa (DPA).
+clasf_pnd;No aplica;Clasificación comunal según PNDR.
+pob_2017;No aplica;Total población comunal según Censo de Población y Vivienda 2017.
+bs03;2021;Tiempo promedio en minutos al recinto de educación básica más cercano a la entidad rural.
+bs04;2021;Tiempo promedio en minutos al recinto de educación media más cercano a la entidad rural.
+bs07;2021;Tiempo promedio en minutos al hospital o clínica más cercana a la entidad rural.
+bs11;2021;Indisponibilidad de suministro eléctrico - indicador SAIDI anual.
+bs12;2021;Porcentaje de viviendas conectadas a la red de agua potable respecto del total de viviendas de la comuna.
+bs13;2021;Porcentaje de la población saneada por alcantarillado respecto al total de la población de la comuna.
+bs14;2021;Vulnerabilidad escolar de niños y niñas que asisten a nivel básico y medio.
+bs16;2021;Tasa de denuncias sobre Delitos de Violencia Intrafamiliar hacia la mujer cada 100.000 habitantes.
+bs17;2021;Tasa de denuncias sobre Delitos de Mayor Connotación Social cada 100.000 habitantes.
+bs21;2021;Tiempo promedio en minutos al centro de salud primaria más cercano a la entidad rural.
+oe01;2019-2021;Tasa promedio trianual de la Participación del Fondo Común Municipal en el Ingreso Municipal Total (descontadas las transferencias).
+oe12;2021;Número de oficinas bancarias por cada 10.000 habitantes.
+oe13;2021;Número de servicios de correo por cada 10.000 habitantes.
+oe15;2021;Porcentaje de kilómetros de carreteras y caminos pavimentados de la red principal y secundaria respecto del total de carreteras y caminos de la red principal y secundaria.
+oe16;2021;Colocaciones bancarias por habitante.
+sm02;2021;Precio promedio m3 de agua potable.
+sm06;2021;Porcentaje de establecimientos educacionales de la comuna que cuentan con certificación ambiental escolar.
+sm08;2017-2021;Porcentaje de superficie forestal bajo manejo forestal sostenible (Ley 20.283) respecto del total comunal.
+sm11;2018-2021;Déficit o Superávit Pluviométrico.
+ci01;2021;Número de cultores del patrimonio inmaterial cada 1.000 habitantes.
+ci02;2021;Número de organizaciones comunitarias cada 1.000 habitantes.
+ci05;2021;Porcentaje de mujeres concejalas en la comuna.
+ci06;2021;Número de espacios culturales presentes en la comuna por cada 1.000 habitantes.
+ci07;2021;Porcentaje de establecimientos que integran el programa de lenguas indígenas del total de establecimientos de las que es objeto el programa.

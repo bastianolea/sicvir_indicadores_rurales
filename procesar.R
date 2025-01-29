@@ -28,3 +28,6 @@ datos2 <- datos |>
 # guardar ----
 write_csv2(datos2, "datos/sicvir_indicadores_rurales.csv")
 writexl::write_xlsx(datos2, "datos/sicvir_indicadores_rurales.xlsx")
+
+write_csv2(etiquetas, "datos/sicvir_etiquetas.csv")
+writexl::write_xlsx(etiquetas, "datos/sicvir_etiquetas.xlsx")
