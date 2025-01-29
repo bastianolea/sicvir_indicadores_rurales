@@ -1,8 +1,11 @@
 ---
-title: "Untitled"
+title: "SICVIR: resumen de variables"
 format:
   html: 
      self-contained: true
+     fig-width: 8
+     fig-height: 3
+     fig-align: "center"
 execute: 
   echo: false
   warning: false
@@ -21,6 +24,9 @@ library(pander)
 library(here)
 library(tidyr)
 library(glue)
+library(ggplot2)
+library(scales)
+library(patchwork)
 ```
 
 ```{r datos}
@@ -41,7 +47,7 @@ variables <- etiquetas |>
 # })
 ```
 
-```{r fig.width = 6, results = "asis"}
+```{r results = "asis"}
 walk(variables, \(variable) {
   # variable <- variables[2]
   
@@ -55,21 +61,16 @@ walk(variables, \(variable) {
   datos_variable <- sicvir |>
     select(comuna, region, !!sym(variable))
   
-  n_no_perdidos <- length(!is.na(datos_variable[[variable]]))
+  datos_variable_validos <- datos_variable |> 
+    filter(!is.na(!!sym(variable)))
+    
+  n_no_perdidos <- nrow(datos_variable_validos)
+  porcentaje <- percent(n_no_perdidos/nrow(sicvir), accuracy = 0.01)
   
-  pandoc.p(glue("Comunas con datos en la variable: {n_no_perdidos}"))
-  
-  # tabla básica
-  tabla <- datos_variable |> 
-    arrange(desc(!!sym(variable))) |> 
-    slice(1:20) |> 
-    gt() |>
-    data_color(columns = !!sym(variable),
-               palette = "YlGn")
+  pandoc.p(glue("Comunas con datos en la variable: {n_no_perdidos} ({porcentaje})"))
   
   # estadísticos descriptivos
-  percentiles <- datos_variable |> 
-    filter(!is.na(!!sym(variable))) |>
+  percentiles <- datos_variable_validos |> 
     summarize(promedio = mean(!!sym(variable)),
               min = min(!!sym(variable)),
               p_25 = quantile(!!sym(variable), .25),
@@ -96,8 +97,8 @@ walk(variables, \(variable) {
       max = "máximo") |> 
     print(type = "html")
   
-  datos_variable |> 
-    filter(!is.na(!!sym(variable))) |> 
+  # tabla vertical
+  datos_variable_validos |> 
     summarize(p_25 = sum(!!sym(variable) < percentiles$p_25),
               p_50 = sum(!!sym(variable) < percentiles$p_50),
               p_60 = sum(!!sym(variable) < percentiles$p_60),
@@ -119,6 +120,39 @@ walk(variables, \(variable) {
     data_color(columns = value, palette = "Blues") |> 
     opt_table_lines("none") |> 
     print(type = "html")
+  
+  # gráfico
+  histograma <- datos_variable |>
+    ggplot(aes(!!sym(variable))) +
+    geom_histogram(fill = "#317DBB") +
+    theme_minimal() +
+    theme(axis.title = element_blank()) +
+    scale_y_continuous(expand = expansion(c(0, 0.05)))
+  
+  # poner valor arriba del gráfico
+  histograma <- histograma +
+    geom_vline(xintercept = percentiles$p_75, 
+               linewidth = 1, color = "#09306B") +  
+    annotate("text", x = percentiles$p_75, label = " 75%", 
+             y = max(layer_data(histograma)$y)*1.01,
+             hjust = 0, vjust = 0, size = 4) +
+    geom_vline(xintercept = percentiles$p_50, 
+               linewidth = 1, color = "#09306B", linetype = "dashed") +  
+    annotate("text", x = percentiles$p_50, label = "50% ", 
+             y = max(layer_data(histograma)$y)*1.01,
+             hjust = 1, vjust = 0, size = 4) 
+  
+  boxplot <- datos_variable |> 
+    ggplot(aes(y = !!sym(variable))) +
+    geom_boxplot(fill = "#317DBB", alpha = .4, colour = "#09306B") +
+    theme_minimal() +
+    theme(axis.title = element_blank())
+  
+  # unir gráficos
+  graficos <- histograma + boxplot +
+    plot_layout(widths = c(2, 1))
+  
+  plot(graficos)
   
   pandoc.p('')
   pandoc.horizontal.rule()
