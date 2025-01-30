@@ -36,11 +36,16 @@ library(patchwork)
 ```
 
 ```{r datos}
-sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales.csv"))
-etiquetas <- read_csv2(here("datos/sicvir_etiquetas.csv"))
+# sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales.csv"))
+# etiquetas <- read_csv2(here("datos/sicvir_etiquetas.csv"))
+sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales_2025.csv"))
+etiquetas <- read_csv2(here("datos/sicvir_etiquetas_2025.csv"))
 
-variables <- etiquetas |> 
-  slice(9:n()) |> 
+# variables <- etiquetas |> 
+#   slice(9:n()) |> 
+#   pull(campo)
+variables <- etiquetas |>
+  filter(!is.na(ultima_medicion)) |> 
   pull(campo)
 ```
 

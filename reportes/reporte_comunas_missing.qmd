@@ -31,14 +31,16 @@ library(scales)
 ```
 
 ```{r datos}
-sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales.csv"))
-etiquetas <- read_csv2(here("datos/sicvir_etiquetas.csv"))
+# sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales.csv"))
+# etiquetas <- read_csv2(here("datos/sicvir_etiquetas.csv"))
+sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales_2025.csv"))
+etiquetas <- read_csv2(here("datos/sicvir_etiquetas_2025.csv"))
 ```
 
 
 ```{r loop, fig.width = 6, results = "asis"}
 walk(etiquetas$campo, \(variable) {
-  # variable <- etiquetas$campo[29]
+  # variable <- etiquetas$campo[2]
   
   titulo <- etiquetas |> 
     filter(campo == variable) |> 
@@ -56,7 +58,7 @@ walk(etiquetas$campo, \(variable) {
   comunas <- str_trunc(comunas, 80)
   
   tabla <- datos |> 
-    select(region, provincia, comuna) |> 
+    select(region, any_of("provincia"), comuna) |> 
     gt() |> 
     tab_style(locations = cells_body(columns = comuna),
               style = cell_text(weight = "bold"))

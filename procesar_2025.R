@@ -26,8 +26,11 @@ datos2 <- datos |>
                values_transform = as.character,
                names_to = "variable",
                values_to = "valor") |> 
+  # convertir columnas a numéricas
   mutate(valor = parse_number(valor, locale = locale(decimal_mark = ".", grouping_mark = ""))) |> 
+  # separar variable compuesta
   separate(variable, into = c("variable", "año"), sep = "_") |> 
+  # ordenar años
   mutate(año = factor(año, c("lb", "2m", "3m", "4m")))
 
 # dejar solo la medición más reciente
@@ -39,18 +42,31 @@ datos3 <- datos2 |>
 # volver a wide
 datos4 <- datos3 |> 
   select(-año) |>
-  pivot_wider(values_from = valor, names_from = variable)
+  pivot_wider(values_from = valor, names_from = variable) |> 
+  rename(region = nombre_region)
 
-datos2 <- datos |> 
-  # convertir columnas a numéricas
-  mutate(across(matches("\\d+") & where(is.character), 
-                ~parse_number(.x, locale = locale(decimal_mark = ".", grouping_mark = ""))
-  ))
+# solo dejar etiquetas presentes en los datos
+etiquetas2 <- etiquetas |> 
+  filter(campo %in% names(datos4))
+
+# agregar columna de ultima medición
+etiquetas3 <- etiquetas2 |> 
+  mutate(across(starts_with("ano"),
+                ~na_if(.x, "-"))) |>
+  pivot_longer(starts_with("ano"),
+               values_to = "ultima_medicion", names_to = "medicion",
+               values_transform = as.numeric) |> 
+  # select(-medicion) |> 
+  mutate(medicion = ifelse(is.na(ultima_medicion), NA, medicion)) |> 
+  distinct() |> 
+  group_by(campo) |> 
+  slice_max(ultima_medicion) |> 
+  ungroup()
 
 
 # guardar ----
-write_csv2(datos2, "datos/sicvir_indicadores_rurales.csv")
-writexl::write_xlsx(datos2, "datos/sicvir_indicadores_rurales.xlsx")
+write_csv2(datos4, "datos/sicvir_indicadores_rurales_2025.csv")
+writexl::write_xlsx(datos4, "datos/sicvir_indicadores_rurales_2025.xlsx")
 
-write_csv2(etiquetas, "datos/sicvir_etiquetas.csv")
-writexl::write_xlsx(etiquetas, "datos/sicvir_etiquetas.xlsx")
+write_csv2(etiquetas3, "datos/sicvir_etiquetas_2025.csv")
+writexl::write_xlsx(etiquetas3, "datos/sicvir_etiquetas_2025.xlsx")

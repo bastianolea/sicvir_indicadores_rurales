@@ -1,0 +1,261 @@
+---
+title: "SICVIR: variables presentes en comunas"
+format:
+  html: 
+     fig-align: "center"
+     self-contained: true
+     toc: true
+     toc-depth: 3
+     toc-expand: 1
+     toc-title: "Contenidos"
+     toc-location: left
+     number-sections: false
+execute: 
+  echo: false
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup}
+library(dplyr)
+library(readr)
+library(tidyr)
+library(stringr)
+library(purrr)
+library(gt)
+library(pander)
+library(here)
+library(glue)
+library(ggplot2)
+library(scales)
+library(future)
+library(furrr)
+plan(multisession, workers = 8)
+```
+
+```{r datos}
+# sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales.csv"))
+# etiquetas <- read_csv2(here("datos/sicvir_etiquetas.csv"))
+
+sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales_2025.csv")) |> 
+  # orden de comunas
+  group_by(region) |> 
+  mutate(n = row_number()) |> 
+  ungroup()
+
+etiquetas <- read_csv2(here("datos/sicvir_etiquetas_2025.csv"))
+
+variables_sicvir <- sicvir |> 
+  select(6:last_col(), -n) |> 
+  names()
+```
+
+## Resumen
+```{r}
+missing_comunas <- sicvir |>
+  select(-n) |> 
+  # contar missings por fila
+  rowwise() |> 
+  mutate(n_na = sum(is.na(across(everything()))),
+         n_variables = length(variables_sicvir)) |> 
+  ungroup() |> 
+  select(region, comuna, clasificacion_pndr, n_na, n_variables) |> 
+  mutate(p_missing = n_na/n_variables,
+         p_presentes = 1-p_missing)
+
+# calcular por regiones
+missing_regiones <- missing_comunas |> 
+  group_by(region, clasificacion_pndr) |> 
+  summarize(n_na = sum(n_na),
+            n_variables = sum(n_variables),
+            n_comunas = n()) |> 
+  ungroup() |> 
+  mutate(region = factor(region, rev(unique(sicvir$region)))) |> 
+  mutate(clasificacion_pndr = factor(clasificacion_pndr, 
+                                     levels = c("URBANA", "MIXTA", "RURAL"))) |> 
+  group_by(region) |> 
+  mutate(n_na_total = sum(n_na)) |> 
+  ungroup() |> 
+  mutate(p_missing = n_na/n_variables,
+         p_presentes = 1-p_missing)
+```
+
+
+### Porcentaje de variables presentes por región y clasificación
+```{r resumen1, fig.width = 8, fig.height = 8}
+
+missing_regiones_2 <- missing_regiones |> 
+  pivot_longer(starts_with("p"), names_to = "estado", values_to = "valor") |> 
+  mutate(estado = recode(estado, "p_missing" = "Perdidas",
+                         "p_presentes" = "Presentes"))
+  
+missing_regiones_2 |> 
+  ggplot() +
+  aes(valor, y = region, fill = estado) +
+  geom_col(position = position_stack(0.5),
+           linewidth = 0.8, color = "white") +
+  geom_text(aes(label = ifelse(valor > 0.2, percent(valor, accuracy = 1),
+                               "")),
+            position = position_stack(0.5),
+            color = "white", fontface = "bold") +
+  geom_text(aes(label = ifelse(valor <= 0.2 & valor > 0 & estado == "Perdidas", 
+                               percent(valor, accuracy = 0.1),
+                               ""),
+                x = 1),
+            nudge_x = 0.01,
+            color = "#C73434", hjust = 0.5, angle = -90, vjust = 0, fontface = "bold") +
+  theme_minimal() +
+    facet_wrap(~clasificacion_pndr, nrow = 1) +
+  scale_x_continuous(expand = expansion(c(0, 0.05)),
+                     labels = label_percent(accuracy = 1)) +
+  scale_y_discrete(labels = label_wrap_gen(width = 25, multi_line = TRUE)) +
+  scale_fill_manual(values = c("Perdidas" = "#C73434", "Presentes" = "#317DBB")) +
+  coord_cartesian(clip = "off") +
+  guides(fill = guide_none()) +
+  theme(panel.grid = element_blank(),
+        axis.title = element_blank(),
+        panel.spacing.x = unit(4, "mm"),
+        strip.text = element_text(face = "bold"))
+```
+
+
+
+### Variables perdidas por región
+
+Suma de las variables perdidas en cada comuna, por región.
+
+```{r resumen2, fig.height = 8}
+missing_regiones |> 
+  ggplot() +
+  aes(n_na, y = region, fill = clasificacion_pndr) +
+  geom_col(position = position_stack(0.5),
+           linewidth = 0.8, color = "white") +
+  geom_text(aes(label = ifelse(n_na > 0, n_na, "")),
+            position = position_stack(0.5),
+            color = "white", fontface = "bold") +
+  geom_text(aes(label = n_na_total, x = n_na_total),
+            color = "black", fontface = "bold", nudge_x = 0.3, hjust = 0) +
+  theme_minimal() +
+  scale_x_continuous(expand = expansion(c(0, 0.05))) +
+  scale_y_discrete(labels = label_wrap_gen(width = 25, multi_line = TRUE)) +
+  scale_fill_manual(values = c("RURAL" = "#34C7A0", "MIXTA" = "#34AEC7", "URBANA" = "#317DBB")) +
+  theme(panel.grid.major = element_blank(),
+        axis.title = element_blank()) +
+  guides(fill = guide_legend(position = "top", title = "PNDR", reverse = TRUE))
+
+```
+
+
+```{r procesar, include=FALSE}
+outputs_comunas <- future_map(sicvir$comuna |> set_names(), \(.comuna) {
+  
+  variables_comuna <- sicvir |> 
+    filter(comuna == .comuna) |> 
+    pivot_longer(c(6:last_col(), -n))
+  
+  variables_comuna_presentes <- variables_comuna |> 
+    filter(!is.na(value)) |> 
+    pull(name)
+  
+  proporcion <- length(variables_comuna_presentes)/length(variables_sicvir)
+  presentes <- glue("{length(variables_comuna_presentes)} de {length(variables_sicvir)}")
+  porcentaje <- percent(proporcion, accuracy = 1)
+  # porcentaje <- ifelse(proporcion == 1, "100%", porcentaje)
+  
+  # variables presentes
+  tabla <- tibble(variables_sicvir) |> 
+    mutate(presente = variables_sicvir %in% variables_comuna_presentes) |> 
+    left_join(etiquetas |> select(campo, descripcion, ultima_medicion),
+              by = join_by(variables_sicvir == campo))
+  
+  # gráfico de torta
+  grafico_presentes <- tabla |> 
+    count(presente) |>
+    ggplot() +
+    geom_col(aes(x = 1, y = n, fill = presente),
+             position = position_stack()) +
+    coord_polar(theta = "y") +
+    scale_fill_manual(values = c("FALSE" = "#C73434", "TRUE" = "#317DBB")) +
+    scale_x_discrete(expand = expansion(c(1, 0))) +
+    theme_void() +
+    guides(fill = guide_none())
+  
+  # cambiar grádico de torta si es 100%
+  if (proporcion == 1) {
+    grafico_presentes <- grafico_presentes +
+      annotate("text", x = -Inf, y = -Inf, size = 4, label = "OK", color = "#09306B")
+  }
+  
+  # tabla gt
+  tabla_presentes <- tabla |> 
+    mutate(presente = factor(presente,levels = c("FALSE", "TRUE"))) |> 
+    gt() |> 
+    data_color(
+      columns = presente,
+      target_columns = variables_sicvir,
+      method = "factor",
+      palette = c("#C73434", "#317DBB")) |> 
+    cols_hide(presente) |> 
+    opt_table_lines("none") |> 
+    tab_style(locations = cells_body(),
+              style = cell_borders(sides = "top", color = "white", weight = px(2))) |> 
+    tab_options(column_labels.hidden = TRUE) 
+  
+  region <- unique(variables_comuna$region)
+  orden <- unique(variables_comuna$n)
+  clasificacion_pndr <- unique(variables_comuna$clasificacion_pndr)
+  
+  # output
+  return(
+    list(variables_comuna = variables_comuna,
+         comuna = str_to_title(.comuna),
+         region = region,
+         orden = orden, 
+         clasificacion_pndr = clasificacion_pndr,
+         porcentaje = porcentaje,
+         presentes = presentes,
+         grafico_presentes = grafico_presentes,
+         tabla_presentes = tabla_presentes)
+  )
+})
+
+```
+
+
+```{r outputs, fig.height = 1, fig.width = 2, results = "asis"}
+
+walk(outputs_comunas, \(output) {
+  # output <- outputs_comunas[[1]]
+
+  # región
+  if (output$orden == 1) {
+  pandoc.header(output$region, level = 2)
+  }
+
+  # comuna
+  pandoc.header(output$comuna, level = 3)
+  
+  pandoc.p(glue("_{output$clasificacion_pndr}_"))
+
+  pandoc.p(':::: {.columns}')
+
+    pandoc.p('::: {.column width="60%"}')
+    pandoc.p(glue("Variables presentes: {output$presentes}"))
+    pandoc.p(glue("Porcentaje de variables presentes: {output$porcentaje}"))
+    pandoc.p(':::')
+  
+    pandoc.p('::: {.column width="40%"}')
+    plot(output$grafico_presentes)
+    pandoc.p(':::')
+
+  pandoc.p('::::')
+
+  print(output$tabla_presentes, type = "html")
+  
+  pandoc.horizontal.rule()
+})
+
+```
