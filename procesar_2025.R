@@ -54,7 +54,8 @@ datos5 <- datos4 |>
 # cargar nombres de comunas
 cut_comunas <- read_csv2("datos/datos_externos/cut_comuna.csv") |> 
   select(codigo_region, nombre_region, codigo_comuna, nombre_comuna) |> 
-  mutate(codigo_comuna = as.numeric(codigo_comuna))
+  mutate(codigo_comuna = as.numeric(codigo_comuna),
+         codigo_region = as.numeric(codigo_region))
 
 # estandarizar nombres de comunas
 datos6 <- datos5 |> 
