@@ -3,7 +3,7 @@ library(readr)
 library(janitor)
 library(dplyr)
 
-archivo <- dir("datos/datos_originales", full.names = T) |> str_subset("(?<!\\$)indicador.*xlsx")
+archivo <- dir("datos/datos_originales", full.names = T) |> stringr::str_subset("(?<!\\$)indicador.*xlsx")
 # archivo <- "datos/datos_originales/SICVIR_SUBDERE_28Ene2025.xlsx"
 
 # hoja_1 <- read_xlsx(archivo, sheet = 1)

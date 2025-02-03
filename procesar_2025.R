@@ -2,6 +2,8 @@ library(readxl)
 library(readr)
 library(janitor)
 library(dplyr)
+library(tidyr)
+library(stringr)
 
 # datos enviados por Matías Poch el 19/01/2025
 archivo <- "datos/datos_originales/SICVIR_SUBDERE_28Ene2025.xlsx"
@@ -17,8 +19,7 @@ etiquetas <- read_xlsx(archivo, sheet = 1) |>
 datos <- read_xlsx(archivo, sheet = 2) |> 
   clean_names()
 
-library(tidyr)
-library(stringr)
+
 
 # tienen una variable en el nombre de columna
 datos2 <- datos |> 
