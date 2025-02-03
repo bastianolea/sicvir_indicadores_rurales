@@ -46,9 +46,30 @@ datos4 <- datos3 |>
   pivot_wider(values_from = valor, names_from = variable) |> 
   rename(region = nombre_region)
 
+# limpiar
+datos5 <- datos4 |> 
+  rename(clasificacion = clasificacion_pndr) |> 
+  mutate(clasificacion = str_to_title(clasificacion))
+
+# cargar nombres de comunas
+cut_comunas <- read_csv2("datos/datos_externos/cut_comuna.csv") |> 
+  select(codigo_region, nombre_region, codigo_comuna, nombre_comuna) |> 
+  mutate(codigo_comuna = as.numeric(codigo_comuna))
+
+# estandarizar nombres de comunas
+datos6 <- datos5 |> 
+  select(-codigo_region, -region, -comuna) |>
+  left_join(cut_comunas,
+            by = "codigo_comuna") |> 
+  relocate(codigo_region, nombre_region, codigo_comuna, nombre_comuna,
+           everything())
+
 # solo dejar etiquetas presentes en los datos
 etiquetas2 <- etiquetas |> 
-  filter(campo %in% names(datos4))
+  filter(campo %in% names(datos6),
+         !str_detect(campo, "codigo_"),
+         !str_detect(campo, "nombre_")) |> 
+  arrange(campo)
 
 # agregar columna de ultima medición
 etiquetas3 <- etiquetas2 |> 
@@ -66,8 +87,8 @@ etiquetas3 <- etiquetas2 |>
 
 
 # guardar ----
-write_csv2(datos4, "datos/sicvir_indicadores_rurales_2025.csv")
-writexl::write_xlsx(datos4, "datos/sicvir_indicadores_rurales_2025.xlsx")
+write_csv2(datos6, "datos/sicvir_indicadores_rurales_2025.csv")
+writexl::write_xlsx(datos6, "datos/sicvir_indicadores_rurales_2025.xlsx")
 
 write_csv2(etiquetas3, "datos/sicvir_etiquetas_2025.csv")
 writexl::write_xlsx(etiquetas3, "datos/sicvir_etiquetas_2025.xlsx")
