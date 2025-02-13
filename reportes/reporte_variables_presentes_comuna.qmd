@@ -33,7 +33,7 @@ library(ggplot2)
 library(scales)
 library(future)
 library(furrr)
-plan(multisession, workers = 8)
+plan(multisession, workers = 6)
 ```
 
 ```{r datos}
@@ -42,7 +42,7 @@ plan(multisession, workers = 8)
 
 sicvir <- read_csv2(here("datos/sicvir_indicadores_rurales_2025.csv")) |> 
   # orden de comunas
-  group_by(region) |> 
+  group_by(nombre_region) |> 
   mutate(n = row_number()) |> 
   ungroup()
 
@@ -62,21 +62,21 @@ missing_comunas <- sicvir |>
   mutate(n_na = sum(is.na(across(everything()))),
          n_variables = length(variables_sicvir)) |> 
   ungroup() |> 
-  select(region, comuna, clasificacion_pndr, n_na, n_variables) |> 
+  select(nombre_region, nombre_comuna, clasificacion, n_na, n_variables) |> 
   mutate(p_missing = n_na/n_variables,
          p_presentes = 1-p_missing)
 
 # calcular por regiones
 missing_regiones <- missing_comunas |> 
-  group_by(region, clasificacion_pndr) |> 
+  group_by(nombre_region, clasificacion) |> 
   summarize(n_na = sum(n_na),
             n_variables = sum(n_variables),
             n_comunas = n()) |> 
   ungroup() |> 
-  mutate(region = factor(region, rev(unique(sicvir$region)))) |> 
-  mutate(clasificacion_pndr = factor(clasificacion_pndr, 
-                                     levels = c("URBANA", "MIXTA", "RURAL"))) |> 
-  group_by(region) |> 
+  mutate(nombre_region = factor(nombre_region, rev(unique(sicvir$nombre_region)))) |> 
+  mutate(clasificacion_pndr = factor(clasificacion, 
+                                     levels = c("Urbana", "Mixta", "Rural"))) |> 
+  group_by(nombre_region) |> 
   mutate(n_na_total = sum(n_na)) |> 
   ungroup() |> 
   mutate(p_missing = n_na/n_variables,
@@ -94,7 +94,7 @@ missing_regiones_2 <- missing_regiones |>
   
 missing_regiones_2 |> 
   ggplot() +
-  aes(valor, y = region, fill = estado) +
+  aes(valor, y = nombre_region, fill = estado) +
   geom_col(position = position_stack(0.5),
            linewidth = 0.8, color = "white") +
   geom_text(aes(label = ifelse(valor > 0.2, percent(valor, accuracy = 1),
@@ -130,7 +130,7 @@ Suma de las variables perdidas en cada comuna, por región.
 ```{r resumen2, fig.height = 8}
 missing_regiones |> 
   ggplot() +
-  aes(n_na, y = region, fill = clasificacion_pndr) +
+  aes(n_na, y = nombre_region, fill = clasificacion_pndr) +
   geom_col(position = position_stack(0.5),
            linewidth = 0.8, color = "white") +
   geom_text(aes(label = ifelse(n_na > 0, n_na, "")),
@@ -141,7 +141,7 @@ missing_regiones |>
   theme_minimal() +
   scale_x_continuous(expand = expansion(c(0, 0.05))) +
   scale_y_discrete(labels = label_wrap_gen(width = 25, multi_line = TRUE)) +
-  scale_fill_manual(values = c("RURAL" = "#34C7A0", "MIXTA" = "#34AEC7", "URBANA" = "#317DBB")) +
+  scale_fill_manual(values = c("Rural" = "#34C7A0", "Mixta" = "#34AEC7", "Urbana" = "#317DBB")) +
   theme(panel.grid.major = element_blank(),
         axis.title = element_blank()) +
   guides(fill = guide_legend(position = "top", title = "PNDR", reverse = TRUE))
@@ -150,10 +150,10 @@ missing_regiones |>
 
 
 ```{r procesar, include=FALSE}
-outputs_comunas <- future_map(sicvir$comuna |> set_names(), \(.comuna) {
+outputs_comunas <- future_map(sicvir$nombre_comuna |> set_names(), \(.comuna) {
   
   variables_comuna <- sicvir |> 
-    filter(comuna == .comuna) |> 
+    filter(nombre_comuna == .comuna) |> 
     pivot_longer(c(6:last_col(), -n))
   
   variables_comuna_presentes <- variables_comuna |> 
@@ -204,9 +204,9 @@ outputs_comunas <- future_map(sicvir$comuna |> set_names(), \(.comuna) {
               style = cell_borders(sides = "top", color = "white", weight = px(2))) |> 
     tab_options(column_labels.hidden = TRUE) 
   
-  region <- unique(variables_comuna$region)
+  region <- unique(variables_comuna$nombre_region)
   orden <- unique(variables_comuna$n)
-  clasificacion_pndr <- unique(variables_comuna$clasificacion_pndr)
+  clasificacion_pndr <- unique(variables_comuna$clasificacion)
   
   # output
   return(

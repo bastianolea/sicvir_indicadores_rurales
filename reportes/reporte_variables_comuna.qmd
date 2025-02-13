@@ -70,7 +70,7 @@ walk(variables, \(variable) {
   pandoc.p(paste("Variable", pandoc.emphasis.return(variable)))
   
   datos_variable <- sicvir |>
-    select(comuna, region, !!sym(variable))
+    select(nombre_comuna, nombre_region, !!sym(variable))
   
   datos_variable_validos <- datos_variable |> 
     filter(!is.na(!!sym(variable)))

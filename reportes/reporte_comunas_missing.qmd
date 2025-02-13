@@ -53,14 +53,14 @@ walk(etiquetas$campo, \(variable) {
   
   porcentaje <- percent(nrow(datos)/nrow(sicvir), accuracy = 0.01)
   concepto <- if_else(nrow(datos) == 1, "comuna", "comunas")
-  comunas <- paste(datos$comuna, collapse = ", ")
+  comunas <- paste(datos$nombre_comuna, collapse = ", ")
   comunas <- str_replace(comunas, ",(?!.*,)", " y") # una coma, no seguida de otras comas
   comunas <- str_trunc(comunas, 80)
   
   tabla <- datos |> 
-    select(region, any_of("provincia"), comuna) |> 
+    select(nombre_region, any_of("nombre_provincia"), nombre_comuna) |> 
     gt() |> 
-    tab_style(locations = cells_body(columns = comuna),
+    tab_style(locations = cells_body(columns = nombre_comuna),
               style = cell_text(weight = "bold"))
   
   # sólo si no tienen comunas
